@@ -1,0 +1,15 @@
+{
+    "projectName": "OpenApiSl",
+    "languages": [{
+        "id": "open-api-sl",
+        "grammar": "src/language/open-api-sl.langium",
+        "fileExtensions": [".osl"],
+        "textMate": {
+            "out": "syntaxes/open-api-sl.tmLanguage.json"
+        },
+        "monarch": {
+            "out": "syntaxes/open-api-sl.monarch.ts"
+        }
+    }],
+    "out": "src/language/generated"
+}

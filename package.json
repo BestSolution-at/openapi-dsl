@@ -1,0 +1,86 @@
+{
+    "name": "openapi-sl",
+    "description": "Please enter a brief description here",
+    "version": "0.0.1",
+    "files": [
+        "bin"
+    ],
+    "type": "module",
+    "scripts": {
+        "build": "tsc -b tsconfig.json && node esbuild.mjs",
+        "watch": "concurrently -n tsc,esbuild -c blue,yellow \"tsc -b tsconfig.json --watch\" \"node esbuild.mjs --watch\"",
+        "lint": "eslint src --ext ts",
+        "langium:generate": "langium generate",
+        "langium:watch": "langium generate --watch",
+        "vscode:prepublish": "npm run build && npm run lint",
+        "build:worker": "esbuild --minify ./out/language/main-browser.js --bundle --format=iife --outfile=./public/open-api-sl-server-worker.js",
+        "prepare:public": "shx mkdir -p ./public && shx cp -fr ./src/static/* ./public/",
+        "copy:monaco-editor-wrapper": "shx cp -fr ./node_modules/monaco-editor-wrapper/bundle ./public/monaco-editor-wrapper",
+        "copy:monaco-workers": "shx cp -fr ./node_modules/monaco-editor-workers/dist/ ./public/monaco-editor-workers",
+        "copy:monarch-syntax": "shx cp -fr ./out/syntaxes ./public/syntaxes",
+        "build:web": "npm run build && npm run build:monarch && npm run prepare:public && npm run build:worker && npm run copy:monaco-editor-wrapper && npm run copy:monaco-workers && npm run copy:monarch-syntax",
+        "build:monarch": "tsc -b tsconfig.monarch.json",
+        "serve": "node ./out/web/app.js"
+    },
+    "dependencies": {
+        "chalk": "~5.3.0",
+        "commander": "~10.0.0",
+        "express": "~4.18.2",
+        "g": "^2.0.1",
+        "generator-langium": "^2.0.0",
+        "langium": "~2.0.0",
+        "monaco-editor-workers": "~0.34.2",
+        "monaco-editor-wrapper": "~1.6.0",
+        "vscode-languageclient": "~8.0.2"
+    },
+    "devDependencies": {
+        "@types/express": "^4.17.17",
+        "@types/node": "~16.18.11",
+        "@types/vscode": "~1.67.0",
+        "@typescript-eslint/eslint-plugin": "~5.58.0",
+        "@typescript-eslint/parser": "~5.58.0",
+        "concurrently": "^7.6.0",
+        "esbuild": "^0.18.6",
+        "eslint": "~8.33.0",
+        "langium-cli": "~2.0.0",
+        "shx": "^0.3.4",
+        "typescript": "~5.0.4"
+    },
+    "displayName": "openapi-sl",
+    "engines": {
+        "vscode": "^1.67.0",
+        "node": ">=16.0.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "open-api-sl",
+                "aliases": [
+                    "OpenAPI SL",
+                    "open-api-sl"
+                ],
+                "extensions": [
+                    ".osl"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "open-api-sl",
+                "scopeName": "source.open-api-sl",
+                "path": "./syntaxes/open-api-sl.tmLanguage.json"
+            }
+        ]
+    },
+    "activationEvents": [
+        "onLanguage:open-api-sl"
+    ],
+    "main": "./out/extension/main.cjs",
+    "bin": {
+        "open-api-sl-cli": "./bin/cli.js"
+    }
+}
