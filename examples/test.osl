@@ -1,0 +1,83 @@
+meta {
+    openapi: '3.0.1'
+    info: {
+        version: '1.0.0'
+        title: 'Swagger Petstore'
+        description: 'A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification'
+        termsOfService: 'http://swagger.io/terms/'
+        contact: {
+            name: 'Swagger API Team'
+            email: 'apiteam@swagger.io'
+            url: 'http://swagger.io'
+        }
+        license: {
+            name: 'MIT'
+        }
+    }
+    servers: [
+        {
+            url: "http://petstore.swagger.io/v1"
+        }
+    ]
+}
+
+types {
+    alias LIMIT = integer(int32)(0,100]
+    alias WEIGHT = number(double)(0,1000]
+
+    type NewPet {
+        name: string
+        weight: WEIGHT
+    }
+    type Pet extends NewPet {
+        id: int64
+    }
+    type Car(_type='car') {
+        id: string
+        seats: int32
+    }
+    type Bike(_type='bike') {
+        id: string
+        gears: integer(int32)[0,21]
+    }
+    union Vehicle = Car | Bike
+
+    type Movie {
+        id: string
+        actors: array<Actor>
+    }
+
+    type Actor {
+        id: string
+        firstname: string
+        lastname: string
+        birthday: date
+        size: double
+    }
+
+    type Error {
+        code: int32
+        message: string
+    }
+}
+
+endpoints {
+    PetResource at '/pets' {
+        '' {
+            get findPets(query limit?: LIMIT) =>
+                200: array<Pet,100>
+                default: Error
+            post createPet(body pet: NewPet) =>
+                200: Pet
+                default: Error
+        }
+        '/{id}' {
+            get findPetById(path id: int64) =>
+                200
+                default: Error
+            delete deletePet(path id: string) =>
+                204
+                default: Error
+        }
+    }
+}

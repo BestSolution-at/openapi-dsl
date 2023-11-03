@@ -1,4 +1,4 @@
-import { Endpoint, isModelType, isStringLiteral, ValueType, type Model, type ModelType, UnionType, isValueType, isUnionType, Property, isBuiltinStringFormats, isBuiltinIntegerFormats, isAlias, TypeDef, isBuiltinFloatFormats, isPrimitiveFloats } from '../language/generated/ast.js';
+import { Endpoint, isModelType, isStringLiteral, ValueType, type Model, type ModelType, UnionType, isValueType, isUnionType, Property, isBuiltinStringFormats, isBuiltinIntegerFormats, isAlias, TypeDef, isBuiltinFloatFormats, isPrimitiveFloats, isPrimitiveIntegers, Parameter, Type } from '../language/generated/ast.js';
 import * as fs from 'node:fs';
 import { CompositeGeneratorNode, IndentNode, NL, toString } from 'langium';
 import * as path from 'node:path';
@@ -66,7 +66,112 @@ export function generateJavaScript(model: Model, filePath: string, destination: 
 }
 
 function generateEndoint(endpoint: Endpoint, endpointBody: IndentNode) {
+    endpoint.paths.forEach( (p,idx) => {
+        endpointBody.append(`"${endpoint.path}${p.path}": {`, NL)
+        endpointBody.indent( operationBody => {
+            p.operations.forEach( (o, idx) => {
+                operationBody.append(`"${o.type}": {`, NL)
+                operationBody.indent( operationProperties => {
+                    operationProperties.append(`"operationId": "${o.name}",`, NL)
+                    const parameters = o.parameters.filter( p => p.in !== 'body')
+                    if( parameters.length > 0 ) {
+                        operationProperties.append(`"parameters": [`, NL)
+                        operationProperties.indent( parameterBody => {
+                            parameters.forEach( p => generateParameter(p, parameterBody) )
+                        } )
+                        operationProperties.append(`],`, NL)
+                    }
+                    const body = o.parameters.find( p => p.in === 'body' );
+                    if( body ) {
+                        operationProperties.append(`"requestBody": {`, NL)
+                        operationProperties.indent( parameterProps => {
+                            parameterProps.append(`"content": {`, NL)
+                            parameterProps.indent( contentBody => {
+                                contentBody.append(`"application/json": {`, NL)
+                                contentBody.indent( contentDef => {
+                                generateSchema(body.type, contentDef)
+                            } )
+                            contentBody.append(`}`, NL)
+                            })
+                            parameterProps.append('}', NL)
+                        });
+                        operationProperties.append(`},`, NL)
+                    }
+                    operationProperties.append(`"responses": {`, NL)
+                    operationProperties.indent( responseBody => {
+                        o.respones.forEach( (r,idx) => {
+                            responseBody.append(`"${r.code}": {`, NL)
+                            responseBody.indent( responseProps => {
+                                responseProps.append(`"description": ""`)
+                                if( r.type ) {
+                                    responseProps.append(',', NL)
+                                    const type = r.type;
+                                    responseProps.append(`"content": {`, NL)
+                                    responseProps.indent( mime => {
+                                        mime.append(`"application/json": {`, NL)
+                                        mime.indent( schema => generateSchema(type, schema) )
+                                        mime.append(`}`, NL)
+                                    } )
+                                    responseProps.append(`}`, NL)
+                                } else {
+                                    responseProps.appendNewLine();
+                                }
+                            } )
+                            responseBody.append(`}`)
+                            if( idx + 1 < o.respones.length ) {
+                                responseBody.append(',')
+                            }
+                            responseBody.appendNewLine();
+                        } );
+                    } )
+                    operationProperties.append(`}`, NL)
+                } );
+                operationBody.append(`}`)
+                if( idx + 1 < p.operations.length ) {
+                    operationBody.append(',')
+                }
+                operationBody.appendNewLine();
+            } )
+            
+        } );
+        endpointBody.append(`}`)
+        if( idx + 1 < endpoint.paths.length ) {
+            endpointBody.append(',')
+        }
+        endpointBody.appendNewLine();
+    } );
+}
 
+function generateParameter(parameter: Parameter, parameterBody: IndentNode) {
+    parameterBody.append('{', NL)
+    parameterBody.indent( parameterProps => {
+        parameterProps.append(`"name": "${parameter.name}",`, NL)
+        parameterProps.append(`"in": "${parameter.in}",`, NL)
+        if( parameter.in === 'path' || parameter.optional === false ) {
+            parameterProps.append(`"required": true,`, NL)
+        }
+        generateSchema(parameter.type, parameterProps)        
+    })
+    parameterBody.append('}', NL)
+}
+
+function generateSchema(type: Type, contentDef: IndentNode) {
+    contentDef.append(`"schema": {`, NL)
+    if( type.array ) {
+        contentDef.indent( arrayDef => {
+            arrayDef.append(`"type": "array",`, NL)
+            if( type.maxItems ) {
+                arrayDef.append(`"maxItems": ${type.maxItems},`, NL)
+            }
+            arrayDef.append(`"items": {`, NL)
+            arrayDef.indent( typeDefBody => generateTypeDef(type.typeDef, typeDefBody) )
+            arrayDef.append(`}`, NL)    
+        })
+    } else {
+        contentDef.indent( typeDefBody => generateTypeDef(type.typeDef,typeDefBody))
+    }
+    
+    contentDef.append(`}`, NL)
 }
 
 function generateValueType(type: ValueType, schemaBody: IndentNode, last: boolean) {
@@ -171,10 +276,26 @@ function generateTypeDef(typeDef: TypeDef, typeDefBody: IndentNode) {
             }
         }
         typeDefBody.appendNewLine();
+    } else if( isPrimitiveIntegers(typeDef.primitive) ) {
+        typeDefBody.append(`"type": "integer",`, NL)
+        typeDefBody.append(`"format": "${typeDef.primitive.format}"`)
+        if( typeDef.primitive.lower !== undefined ) {
+            typeDefBody.append(',', NL, `"minimum": ${typeDef.primitive.lower}`)
+            if( typeDef.primitive.lowerBound === '(' ) {
+                typeDefBody.append(',', NL, `"exclusiveMinimum": true`)
+            }
+        }
+        if( typeDef.primitive.upper !== undefined ) {
+            typeDefBody.append(',', NL, `"maximum": ${typeDef.primitive.upper}`)
+            if( typeDef.primitive.upperBound === ')' ) {
+                typeDefBody.append(',', NL, `"exclusiveMaximum": true`)
+            }
+        }
+        typeDefBody.appendNewLine();
     } else if( typeDef.refType && isAlias(typeDef.refType.ref) ) {
         generateTypeDef(typeDef.refType.ref.type.typeDef, typeDefBody);
     } else if( typeDef.refType && isValueType(typeDef.refType.ref) ) {
-        typeDefBody.append(`"$ref": "#/components/schemas/${typeDef.refType.ref.name}"`)
+        typeDefBody.append(`"$ref": "#/components/schemas/${typeDef.refType.ref.name}"`, NL)
     }
 }
 

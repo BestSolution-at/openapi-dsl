@@ -94,7 +94,7 @@ Response:
 ;
 
 Parameter:
-    in=('query'|'path'|'header'|'cookie'|'body') name=ID optional='?'? ':' type=Type
+    in=('query'|'path'|'header'|'cookie'|'body') name=ID optional?='?'? ':' type=Type
     ;
 
 Property:
