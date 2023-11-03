@@ -2,13 +2,13 @@ meta {
     openapi: '3.0.1'
     info: {
         version: '1.0.0'
-        title: 'Swagger Petstore'
-        description: 'A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification'
+        title: 'Simple DSL Demo'
+        description: 'Samples for all features of OpenAPI DSL'
         termsOfService: 'http://swagger.io/terms/'
         contact: {
-            name: 'Swagger API Team'
-            email: 'apiteam@swagger.io'
-            url: 'http://swagger.io'
+            name: 'BestSolution.at'
+            email: 'info@bestsolution.at'
+            url: 'https://github.com/BestSolution-at/openapi-dsl'
         }
         license: {
             name: 'MIT'
@@ -16,7 +16,7 @@ meta {
     }
     servers: [
         {
-            url: "http://petstore.swagger.io/v1"
+            url: "http://localhost:8080"
         }
     ]
 }
