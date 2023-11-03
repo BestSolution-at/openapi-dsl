@@ -12,7 +12,7 @@ See [langium-quickstart.md](langium-quickstart.md) for a detail description
 npm install
 npm run build
 node ./bin/cli generate examples/test.osl
-code out/test.osl
+code generated/test.osl
 ```
 
 ## In the browser
