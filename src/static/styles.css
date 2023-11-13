@@ -1,7 +1,5 @@
 html,body {
-    background: rgb(33,33,33);
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    color: white;
     margin: 0;
 }
 h1 {
@@ -16,8 +14,20 @@ footer {
 
 /* for monaco */
 .wrapper {
-    padding: 0 5%;
+    flex-grow: 1;
+    display: flex;
 }
 #monaco-editor-root {
-    height: calc(100vh - 7.5rem - 70px);
+    /*height: calc(100vh - 250px);*/
+    flex-grow: 1;
+}
+
+#openapi-content {
+    /*height: calc(100vh - 250px);*/
+}
+
+#doc-preview {
+    /*height: calc(100vh - 250px);*/
+    flex-grow: 1;
+    overflow-y: auto;
 }

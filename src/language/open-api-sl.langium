@@ -3,7 +3,7 @@ grammar OpenApiSl
 entry Model:
     ('meta' model = ModelType)*
     ('types' '{' types += CustomType* '}')?
-    ('endpoints' '{' endpoints += Endpoint* '}')?
+    ( ('endpoints' '{' endpoints += Endpoint* '}') /*| ('channels' '{' channels+=Channel* '}')*/ )?
 ;
 
 ModelType:
@@ -98,7 +98,8 @@ Parameter:
     ;
 
 Property:
-    name=ID optional='?'? ':' type=Type
+    doc=ML_DOC_COMMENT?
+    name=ID optional='?'? ':' type=Type doc=SL_DOC_COMMENT?
 ;
 
 Type:
@@ -117,6 +118,25 @@ StringLiteral:
     value=STRING
 ;
 
+Channel:
+    'channel' name=ID 'at' path=STRING '{'
+        subscription=Subscription?
+        publish=Publish?
+    '}'
+;
+
+Subscription:
+    'subscribe' name=ID '(' (parameters+=ChannelOpParameter ( ',' parameters+=ChannelOpParameter )*)? ')'
+;
+
+Publish:
+    'publish' name=ID '(' (parameters+=ChannelOpParameter ( ',' parameters+=ChannelOpParameter )*)? ')'
+;
+
+ChannelOpParameter:
+    in=('header'|'payload') name=ID ':' type=Type
+;
+
 hidden terminal WS: /\s+/;
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal INT returns number: /[0-9]+/;
@@ -124,5 +144,10 @@ terminal SIGNED_NUMBER returns number: /-\d+((\.\d+)?([eE][\-+]?\d+)?)?/;
 terminal UNSIGNED_NUMBER returns number: /\d+((\.\d+)?([eE][\-+]?\d+)?)?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
+terminal ML_DOC_COMMENT: /\/\-[\s\S]*?\-\//;
+terminal SL_DOC_COMMENT: /-- [^\n\r]*/;
+
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
+
+

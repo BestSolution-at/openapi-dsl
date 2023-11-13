@@ -3,6 +3,12 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { LanguageClient, TransportKind } from 'vscode-languageclient/node.js';
 
+import { createOpenApiSlServices } from '../language/open-api-sl-module.js';
+import { NodeFileSystem } from 'langium/node';
+import { extractAstNode } from '../cli/cli-util.js';
+import { Model } from '../language/generated/ast.js';
+import { generateJavaScript } from '../cli/generator.js';
+
 let client: LanguageClient;
 
 // This function is called when the extension is activated.
@@ -34,6 +40,14 @@ function startLanguageClient(context: vscode.ExtensionContext): LanguageClient {
 
     const fileSystemWatcher = vscode.workspace.createFileSystemWatcher('**/*.osl');
     context.subscriptions.push(fileSystemWatcher);
+
+    const services = createOpenApiSlServices(NodeFileSystem).OpenApiSl;
+    
+    fileSystemWatcher.onDidChange( e => {
+        extractAstNode<Model>(e.path, services).then( m  => {
+            generateJavaScript(m, e.path, path.dirname(e.path))
+        });
+    });
 
     // Options to control the language client
     const clientOptions: LanguageClientOptions = {

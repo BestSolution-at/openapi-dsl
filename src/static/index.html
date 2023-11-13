@@ -5,18 +5,46 @@
         <!-- Page & Monaco styling -->
         <link href="styles.css" rel="stylesheet"/>
         <title>OpenAPI SL in Langium</title>
+        <script
+            src="https://jspm.dev/@spectrum-web-components/bundle/elements.js"
+            type="module" async
+        ></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+
+        <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css">
     </head>
     <body>
-        <h1>OpenAPI SL in Langium</h1>
-        <div class="wrapper">
-            <!-- Monaco Root -->
-            <div id="monaco-editor-root"></div>
+        <div style="display: flex; overflow: hidden; padding: 0 40px; height: 100vh">
+            <sp-theme scale="large" color="light" style="flex-grow: 1; display: flex; flex-direction: column;">
+                <h1>OpenAPI SL in Langium</h1>
+                <sp-tabs selected="1" size="m" style="flex-grow: 1; overflow: hidden;">
+                    <sp-tab label="Editor" value="1"></sp-tab>
+                    <sp-tab label="OpenAPI JSON" value="2"></sp-tab>
+                    <sp-tab label="OpenAPI Docs" value="3"></sp-tab>
+                    <sp-tab-panel value="1" style="overflow: hidden;">
+                        <div class="wrapper">
+                            <!-- Monaco Root -->
+                            <div id="monaco-editor-root"></div>
+                        </div>            
+                    </sp-tab-panel>
+                    <sp-tab-panel value="2" style="overflow: hidden;">
+                        <pre style="margin: 0; flex-grow: 1; overflow: auto;"><code id="openapi-content" class="language-json" style="margin: 0; padding: 0;"></code></pre>
+                    </sp-tab-panel>
+                    <sp-tab-panel value="3" style="overflow: hidden;">
+                        <div id="doc-preview">
+                            <elements-api id="docs" router="hash" layout="sidebar"></elements-api>
+                        </div>
+                    </sp-tab-panel>
+                </sp-tabs>
+            </sp-theme>
         </div>
-        <footer>
-            <p style="font-style:italic">Powered by</p>
-            <img width="125" src="https://langium.org/assets/langium_logo_w_nib.svg" alt="Langium">
-        </footer>
+
+        
         <!-- Monaco Configuration -->
         <script type="module" src="setup.js"></script>
+        <script>hljs.highlightAll();</script>
     </body>
 </html>
