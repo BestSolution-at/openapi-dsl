@@ -1,0 +1,96 @@
+{
+  "name": "open-api-sl",
+  "scopeName": "source.open-api-sl",
+  "fileTypes": [
+    ".osl"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "name": "keyword.control.open-api-sl",
+      "match": "\\b(alias|array|at|binary|body|byte|cookie|date|date-time|default|delete|double|endpoints|extends|float|get|header|int32|int64|integer|meta|mul|number|password|patch|path|post|put|query|string|type|types|union)\\b"
+    },
+    {
+      "name": "string.quoted.double.open-api-sl",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "include": "#string-character-escape"
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single.open-api-sl",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "include": "#string-character-escape"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.open-api-sl",
+          "begin": "/\\*",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.open-api-sl"
+            }
+          },
+          "end": "\\*/",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.open-api-sl"
+            }
+          }
+        },
+        {
+          "begin": "//",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.whitespace.comment.leading.open-api-sl"
+            }
+          },
+          "end": "(?=$)",
+          "name": "comment.line.open-api-sl"
+        },
+        {
+          "name": "comment.block.open-api-sl",
+          "begin": "/\\-",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.open-api-sl"
+            }
+          },
+          "end": "\\-/",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.open-api-sl"
+            }
+          }
+        },
+        {
+          "begin": "--",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.whitespace.comment.leading.open-api-sl"
+            }
+          },
+          "end": "(?=$)",
+          "name": "comment.line.open-api-sl"
+        }
+      ]
+    },
+    "string-character-escape": {
+      "name": "constant.character.escape.open-api-sl",
+      "match": "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\\{[0-9A-Fa-f]+\\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)"
+    }
+  }
+}

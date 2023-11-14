@@ -1,0 +1,26 @@
+62a63,87
+>         },
+>         {
+>           "name": "comment.block.open-api-sl",
+>           "begin": "/\\-",
+>           "beginCaptures": {
+>             "0": {
+>               "name": "punctuation.definition.comment.open-api-sl"
+>             }
+>           },
+>           "end": "\\-/",
+>           "endCaptures": {
+>             "0": {
+>               "name": "punctuation.definition.comment.open-api-sl"
+>             }
+>           }
+>         },
+>         {
+>           "begin": "--",
+>           "beginCaptures": {
+>             "1": {
+>               "name": "punctuation.whitespace.comment.leading.open-api-sl"
+>             }
+>           },
+>           "end": "(?=$)",
+>           "name": "comment.line.open-api-sl"

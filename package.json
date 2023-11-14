@@ -10,7 +10,7 @@
         "build": "tsc -b tsconfig.json && node esbuild.mjs",
         "watch": "concurrently -n tsc,esbuild -c blue,yellow \"tsc -b tsconfig.json --watch\" \"node esbuild.mjs --watch\"",
         "lint": "eslint src --ext ts",
-        "langium:generate": "langium generate",
+        "langium:generate": "rm -rf syntaxes && langium generate && patch syntaxes/open-api-sl.monarch.ts syntax.patch && patch syntaxes/open-api-sl.tmLanguage.json syntax-tm.patch",
         "langium:watch": "langium generate --watch",
         "vscode:prepublish": "npm run build && npm run lint",
         "build:worker": "esbuild --minify ./out/language/main-browser.js --bundle --format=iife --outfile=./public/open-api-sl-server-worker.js",

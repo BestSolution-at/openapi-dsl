@@ -1,0 +1,12 @@
+18,19d17
+<             { regex: /\/\-[\s\S]*?\-\//, action: {"token":"ML_DOC_COMMENT"} },
+<             { regex: /-- [^\n\r]*/, action: {"token":"SL_DOC_COMMENT"} },
+26a25,26
+>             { regex: /-- [^\n\r]*/, action: { "token": "comment.doc" } },
+>             { regex: /\/\-(?!\/)/, action: { "token" : 'comment.doc', "next": '@apidoc' } },
+32a33,37
+>         apidoc: [
+>             { regex: /[^\/-]+/, action: { token: 'comment.doc' }},
+> 			{ regex: /\-\//, action: { token: 'comment.doc', "next": '@pop'} },
+> 			{ regex: /[\/-]/, action: { token: 'comment.doc'} }
+>         ],
