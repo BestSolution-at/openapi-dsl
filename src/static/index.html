@@ -4,23 +4,18 @@
         <meta charset='utf-8'>
         <!-- Page & Monaco styling -->
         <link href="styles.css" rel="stylesheet"/>
-        <title>OpenAPI SL in Langium</title>
-        <script
-            src="https://jspm.dev/@spectrum-web-components/bundle/elements.js"
-            type="module" async
-        ></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
-
-        <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
-        <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css">
+        <link href=" https://cdn.jsdelivr.net/npm/source-code-pro@2.38.0/source-code-pro.min.css " rel="stylesheet">
+        <link href=" https://cdn.jsdelivr.net/npm/source-sans-pro@3.6.0/source-sans-pro.min.css " rel="stylesheet">
+        <title>OpenAPI SL in Langium</title>  
     </head>
     <body>
-        <div style="display: flex; overflow: hidden; padding: 0 40px; height: 100vh">
+        <div id="loading">
+            <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div> <h1>Loading Editor ...</h1>
+        </div>
+        <div id="main-area">
             <sp-theme scale="large" color="light" style="flex-grow: 1; display: flex; flex-direction: column;">
                 <h1>OpenAPI SL in Langium</h1>
-                <sp-tabs selected="1" size="m" style="flex-grow: 1; overflow: hidden;">
+                <sp-tabs id="tabs" selected="1" size="m" style="flex-grow: 1; overflow: hidden;">
                     <sp-tab label="Editor" value="1"></sp-tab>
                     <sp-tab label="OpenAPI JSON" value="2"></sp-tab>
                     <sp-tab label="OpenAPI Docs" value="3"></sp-tab>
@@ -41,10 +36,42 @@
                 </sp-tabs>
             </sp-theme>
         </div>
-
         
         <!-- Monaco Configuration -->
         <script type="module" src="setup.js"></script>
-        <script>hljs.highlightAll();</script>
+
+        <!-- Load web components -->
+        <script src="https://jspm.dev/@spectrum-web-components/theme/sp-theme.js" type="module" async></script>
+        <script src="https://jspm.dev/@spectrum-web-components/theme/src/themes.js" type="module"  async></script>
+        
+        <script src="https://jspm.dev/@spectrum-web-components/tabs/sp-tabs.js" type="module" async></script>
+        <script src="https://jspm.dev/@spectrum-web-components/tabs/sp-tab.js" type="module" async></script>
+        <script src="https://jspm.dev/@spectrum-web-components/tabs/sp-tab-panel.js" type="module" async></script>
+        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+
+        <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css">
+        <script>
+            Promise.all(
+                [
+                    window.customElements.whenDefined('sp-tabs'),
+                    window.customElements.whenDefined('sp-tab'),
+                    window.customElements.whenDefined('sp-tab-panel')
+                ]
+            ).then( () => {
+                document.getElementById('tabs').selected = '1';
+                document.getElementById('main-area').classList.add('visible')
+                setTimeout( () => {
+                    const self = document.getElementById('loading');
+                    self.parentElement.removeChild(self);
+                }, 3000)
+            })
+        </script>
+        <script>
+            hljs.highlightAll();        
+        </script>
     </body>
 </html>
