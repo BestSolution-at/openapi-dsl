@@ -18,5 +18,8 @@ startLanguageServer(shared);
 shared.workspace.DocumentBuilder.onBuildPhase( DocumentState.Validated, docs => {
     const model = docs[0].parseResult.value as Model;
     const jsonContent = generateJSONContent(model);
-    self.postMessage(jsonContent);
+
+    const apiDocJSON = { openAPIDocument: jsonContent };
+
+    self.postMessage(apiDocJSON);
 } )
