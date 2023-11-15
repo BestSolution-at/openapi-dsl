@@ -85,6 +85,7 @@ Path:
 ;
 
 Operation:
+    doc=(ML_DOC_COMMENT|SL_DOC_COMMENT)?
     type=('put'|'get'|'delete'|'patch'|'post') name=ID '(' (parameters += Parameter ( ',' parameters += Parameter* )? )? ')' '=>'
         respones += Response+
 ;
@@ -98,7 +99,7 @@ Parameter:
     ;
 
 Property:
-    doc=ML_DOC_COMMENT?
+    doc=(ML_DOC_COMMENT|SL_DOC_COMMENT)?
     name=ID optional='?'? ':' type=Type doc=SL_DOC_COMMENT?
 ;
 
