@@ -13,7 +13,7 @@ editorConfig.setMainLanguageId('open-api-sl');
 editorConfig.setMonarchTokensProvider(monarchSyntax);
 
 editorConfig.setMainCode(`// OpenAPI SL is running in the web!
-/* meta {
+meta {
     openapi: '3.0.1'
     info: {
         version: '1.0.0'
@@ -73,21 +73,22 @@ endpoints {
                 default: Error
         }
     }
-}*/
+}
 `);
 
 editorConfig.theme = 'vs-light';
 editorConfig.useLanguageClient = true;
 editorConfig.useWebSocket = false;
 
+const messageChannel = new MessageChannel();
 const workerURL = new URL('./open-api-sl-server-worker.js', import.meta.url);
-console.log(workerURL.href);
 
 const lsWorker = new Worker(workerURL.href, {
     type: 'classic',
     name: 'OpenApiSl Language Server'
 });
-lsWorker.addEventListener('message', e => {
+lsWorker.postMessage('connect', [messageChannel.port1])
+messageChannel.port2.onmessage = (e) => {
     if( isOpenAPIMessage(e.data) ) {
         document.getElementById('openapi-content').innerHTML = e.data.openAPIDocument;
         document.getElementById('openapi-content').dataset.highlighted = "";
@@ -96,7 +97,8 @@ lsWorker.addEventListener('message', e => {
         const docs = document.getElementById('docs');
         docs.apiDescriptionDocument = e.data.openAPIDocument;
     }
-})
+};
+
 client.setWorker(lsWorker);
 
 // keep a reference to a promise for when the editor is finished starting, we'll use this to setup the canvas on load

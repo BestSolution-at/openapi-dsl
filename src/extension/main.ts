@@ -3,11 +3,11 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { LanguageClient, TransportKind } from 'vscode-languageclient/node.js';
 
-import { createOpenApiSlServices } from '../language/open-api-sl-module.js';
+/*import { createOpenApiSlServices } from '../language/open-api-sl-module.js';
 import { NodeFileSystem } from 'langium/node';
-import { extractAstNode } from '../cli/cli-util.js';
 import { Model } from '../language/generated/ast.js';
 import { generateJavaScript } from '../cli/generator.js';
+import { DocumentState } from 'langium';*/
 
 let client: LanguageClient;
 
@@ -41,14 +41,16 @@ function startLanguageClient(context: vscode.ExtensionContext): LanguageClient {
     const fileSystemWatcher = vscode.workspace.createFileSystemWatcher('**/*.osl');
     context.subscriptions.push(fileSystemWatcher);
 
-    const services = createOpenApiSlServices(NodeFileSystem).OpenApiSl;
-    
-    fileSystemWatcher.onDidChange( e => {
-        extractAstNode<Model>(e.path, services).then( m  => {
-            generateJavaScript(m, e.path, path.dirname(e.path))
-        });
-    });
+    /*const { shared } = createOpenApiSlServices(NodeFileSystem);
 
+    shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, docs => {
+        console.log('Validation finished', docs);
+        const p = docs[0].uri.path;
+        const model = docs[0].parseResult.value as Model;
+
+        generateJavaScript(model, p, path.dirname(p))
+    })*/
+    
     // Options to control the language client
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'open-api-sl' }],

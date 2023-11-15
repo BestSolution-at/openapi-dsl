@@ -61,6 +61,13 @@ function generateEndoint(endpoint: Endpoint, endpointBody: IndentNode) {
                 operationBody.append(`"${o.type}": {`, NL)
                 operationBody.indent( operationProperties => {
                     operationProperties.append(`"operationId": "${o.name}",`, NL)
+                    if( o.doc ) {
+                        const doc = parseAPIDoc(o.doc)
+                        if( doc.summary ) {
+                            operationProperties.append(`"summary": "${doc.summary}",`, NL)    
+                        }
+                        operationProperties.append(`"description": "${doc.description}",`, NL)
+                    }
                     const parameters = o.parameters.filter( p => p.in !== 'body')
                     if( parameters.length > 0 ) {
                         operationProperties.append(`"parameters": [`, NL)
@@ -219,6 +226,12 @@ function generateObjectType(type: ValueType, objectTypeBody: IndentNode) {
 
 function generateProperty(property: Property, propertyBody: IndentNode, last: boolean) {
     propertyBody.append(`"${property.name}": {`, NL)
+    if( property.doc ) {
+        propertyBody.indent( typeDefBody => {
+            const doc = parseAPIDoc(property.doc);
+            typeDefBody.append(`"description": "${doc.summary ? doc.summary + ' ' + doc.description : doc.description}",`, NL)
+        } );
+    }
     if( property.type.array ) {
         propertyBody.indent( arrayBody => {
             arrayBody.append(`"type": "array",`, NL)
@@ -349,4 +362,71 @@ function generateRecursiveModel(modelType: ModelType, modelBody: IndentNode, roo
             modelBody.appendNewLine();
         }
     } )
+}
+
+type APIDoc = {
+    description: string
+    summary?: string
+    parameters?: Record<string, string>
+}
+
+function parseAPIDoc(apiDoc: string | undefined): APIDoc {
+    if( apiDoc === undefined ) {
+        return { description: '' };
+    }
+
+    if( apiDoc.startsWith('--') ) {
+        return { description: apiDoc.substring(2).trim() }
+    } else {
+        const lines = apiDoc.split(/\r?\n/).map( l => {
+            return l.replace('/\-','')
+                .replace(/-\/$/,'')
+                .replace(/^[\s|\-|\|]*/,'').trim()
+        } )
+        let summary
+        let description = '';
+        let currentParam: { name: string, doc: string } | undefined;
+        let parameters: Record<string,string> = {};
+
+        for( let i = 0; i < lines.length; i++ ) {
+            const line = lines[i].trim();
+            if( line.startsWith('@param ') ) {
+                const noParam = line.substring('@param '.length).trim();
+                const name = noParam.split(/\s+/)[0];
+                const doc = noParam.substring(name.length).trim();
+                currentParam = { name: name, doc: doc }
+                
+                continue;
+            }
+
+            if( line.length !== 0 ) {
+                if( currentParam ) {
+                    currentParam.doc += ' ' + line
+                    parameters[currentParam.name] = currentParam.doc;
+                } else if( description ) {
+                    description += ' ' + line
+                } else if( summary === undefined ) {
+                    summary = line;
+                } else {
+                    summary += ' ' + line
+                }
+            } else {
+                if( currentParam ) {
+                    
+                } else if( summary === undefined ) { // no first content yet
+                    continue;
+                } else if( lines[i+1] && lines[i+1].trim().length !== 0 && ! lines[i+1].startsWith('@') ) {
+                    description = lines[i+1].trim();
+                    i += 1;
+                }
+            }
+        }
+
+        if( description === '' && summary ) {
+            description = summary;
+            summary = undefined;
+        }
+        console.log(parameters);
+        return { description, summary, parameters }
+    }
 }
