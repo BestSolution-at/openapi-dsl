@@ -330,7 +330,7 @@ function generateUnionType(type: UnionType, schemaBody: IndentNode, last: boolea
 function generateRecursiveModel(modelType: ModelType, modelBody: IndentNode, root: boolean) {
     modelType.properties.forEach( (p, idx) => {
         if( isStringLiteral(p.value) ) {
-            modelBody.append(`"${p.name}": "${p.value.value}"${modelType.properties.length === idx + 1 ?'':','}`, NL)
+            modelBody.append(`"${p.name}": "${jsonSaveString(p.value.value)}"${modelType.properties.length === idx + 1 ?'':','}`, NL)
         } else if( isModelType(p.value) ) {
             const subType = p.value;
             modelBody.append(`"${p.name}": {`, NL)
@@ -345,14 +345,19 @@ function generateRecursiveModel(modelType: ModelType, modelBody: IndentNode, roo
         } else if( p.values.length > 0 ) {
             modelBody.append(`"${p.name}": [`, NL)
             modelBody.indent( arrayContent => {
-                p.values.forEach( v => {
+                p.values.forEach( (v, idx) => {
                     if( isStringLiteral(v) ) {
                         arrayContent.append(`"${v}"`)
                     } else {
                         arrayContent.append('{',NL)
                         arrayContent.indent( subModelBody => generateRecursiveModel(v, subModelBody, false))
-                        arrayContent.append('}',NL)
+                        arrayContent.append('}')
                     }
+
+                    if( idx + 1 < p.values.length ) {
+                        arrayContent.append(',')
+                    }
+                    arrayContent.append(NL)
                 } );
             });
             modelBody.append(`]`)
@@ -362,6 +367,12 @@ function generateRecursiveModel(modelType: ModelType, modelBody: IndentNode, roo
             modelBody.appendNewLine();
         }
     } )
+}
+
+function jsonSaveString(value: string) {
+    return value.split(/\r?\n/)
+        .map( l => l.trim().replaceAll('"', '\\"') )
+        .join('\\n');
 }
 
 type APIDoc = {

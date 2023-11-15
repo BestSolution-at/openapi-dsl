@@ -18,8 +18,14 @@ meta {
     info: {
         version: '1.0.0'
         title: 'Simple DSL Demo'
-        description: 'Samples for all features of OpenAPI DSL'
-        termsOfService: 'http://swagger.io/terms/'
+        description: 'The Project contains a sample DSL
+        
+        # Introduction
+
+        This is an API documented in **OpenAPI format** created using
+        the [Open API DSL](https://bestsolution-at.github.io/openapi-dsl)
+        '
+        termsOfService: 'http://bestsolution.at/terms/'
         contact: {
             name: 'BestSolution.at'
             email: 'info@bestsolution.at'
@@ -38,15 +44,26 @@ meta {
 
 types {
     alias LIMIT = integer(int32)(0,100]
-    alias WEIGHT = number(double)(0,1000]
+    alias WHEELS = integer(int32)(0,4]
+    alias WEIGHT = number(double)(0,10000]
+    alias SEATS = integer(int32)[2,6]
 
-    type NewPet {
-        name: string
-        weight: WEIGHT
+    type BaseVehicle {
+        _type: string -- descriminator used to differentiate vehicles
+        numberOfWheels: WHEELS -- number of wheels
+        weight: WEIGHT -- the weight in KG
     }
-    type Pet extends NewPet {
-        id: int64
+
+    type Car(_type) extends BaseVehicle {
+        seats: SEATS    -- number of seats
     }
+
+    type Bicycle(_type) extends BaseVehicle {
+        frontGearWheels: int32 -- number of front gears
+        backGearWheels: int32 -- number of back gears
+    }
+
+    union Vehicle = Car | Bicycle
 
     type Error {
         code: int32
@@ -55,20 +72,36 @@ types {
 }
 
 endpoints {
-    PetResource at '/pets' {
+    PetResource at '/vehicles' {
         '' {
-            get findPets(query limit?: LIMIT) =>
-                200: array<Pet,100>
+            /-
+            | Get all vehicles
+            | 
+            | @param limit maximum number of items
+            -/
+            get list(query limit?: LIMIT) =>
+                200: array<Vehicle,100>
                 default: Error
-            post createPet(body pet: NewPet) =>
-                200: Pet
+            /-
+            | Create a new vehicle
+            | 
+            | @param vehicle the vehicle to add
+            -/
+            post create(body vehicle: Vehicle) =>
+                200: Vehicle
                 default: Error
         }
         '/{id}' {
-            get findPetById(path id: int64) =>
+            /-
+            | Get a vehicle by ID
+            -/
+            get fetch(path id: int64) =>
                 200
                 default: Error
-            delete deletePet(path id: string) =>
+            /-
+            | Remove a vehicle by ID
+            -/
+            delete remove(path id: int64) =>
                 204
                 default: Error
         }
