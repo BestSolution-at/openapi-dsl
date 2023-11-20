@@ -1,378 +1,285 @@
-import { Endpoint, isModelType, isStringLiteral, ValueType, type Model, type ModelType, UnionType, isValueType, isUnionType, Property, isBuiltinStringFormats, isBuiltinIntegerFormats, isAlias, TypeDef, isBuiltinFloatFormats, isPrimitiveFloats, isPrimitiveIntegers, Parameter, Type } from '../language/generated/ast.js';
-import { CompositeGeneratorNode, IndentNode, NL, toString } from 'langium';
+import { Endpoint, isModelType, isStringLiteral, ValueType, type Model, type ModelType, UnionType, isValueType, isUnionType, Property, isBuiltinStringFormats, isBuiltinIntegerFormats, isAlias, TypeDef, isBuiltinFloatFormats, isPrimitiveFloats, isPrimitiveIntegers, Parameter, Type, ModelValue, Path, Operation, isCustomType, Response, CustomType } from '../language/generated/ast.js';
 
-export function generateJSONContent(model: Model): string {
-    const fileNode = new CompositeGeneratorNode();
-    fileNode.append('{', NL)
+import { toJSONString } from './json-util.js';
+
+export function generateOpenAPIJSONContent(model: Model): string {
+    const result : Record<string, unknown> = {};
 
     if( model.model ) {
-        const modelType = model.model;  
-        fileNode.indent( modelBody => {
-            generateRecursiveModel(modelType, modelBody, true);
-            if( model.endpoints.length > 0 ) {
-                modelBody.append(`"paths": {`, NL)
-                modelBody.indent( endpointBody => {
-                    model.endpoints.forEach( e => generateEndoint(e, endpointBody) )
-                });
-                modelBody.append(`}`)
-                if( model.types.length > 0 ) {
-                    modelBody.append(',')
-                }
-                modelBody.appendNewLine();
-            } else {
-                modelBody.append(`"paths": {}`)
-                if( model.types.length > 0 ) {
-                    modelBody.append(',')
-                }
-                modelBody.appendNewLine();
-            }
-        } );
+        recursiveModel(model.model, result);
+    }
+
+    if( model.endpoints.length > 0 ) {
+        result['paths'] = endpoints(model.endpoints)
     }
 
     if( model.types.length > 0 ) {
-        fileNode.indent( modelBody => {
-            modelBody.append(`"components": {`, NL)
-            modelBody.indent( componentBody => {
-                componentBody.append(`"schemas": {`, NL)
-                componentBody.indent( schemaBody => {
-                    const valueTypes = model.types.filter( isValueType );
-                    const unionTypes = model.types.filter( isUnionType );
-                    valueTypes
-                        .forEach( (t, idx) => generateValueType(t, schemaBody, unionTypes.length === 0 && valueTypes.length === idx + 1) )
-                    unionTypes
-                        .forEach( (t, idx) => generateUnionType(t, schemaBody, unionTypes.length === idx + 1) )
-                });
-                
-                componentBody.append(`}`, NL)
-            });
-            modelBody.append(`}`, NL)
-        });    
+        result['components'] = {
+            schemas: schemas(model.types)
+        }
     }
 
-    fileNode.append('}', NL)
-    return toString(fileNode);
+    return toJSONString(result);
 }
 
-function generateEndoint(endpoint: Endpoint, endpointBody: IndentNode) {
-    endpoint.paths.forEach( (p,idx) => {
-        endpointBody.append(`"${endpoint.path}${p.path}": {`, NL)
-        endpointBody.indent( operationBody => {
-            p.operations.forEach( (o, idx) => {
-                operationBody.append(`"${o.type}": {`, NL)
-                operationBody.indent( operationProperties => {
-                    operationProperties.append(`"operationId": "${o.name}",`, NL)
-                    if( o.doc ) {
-                        const doc = parseAPIDoc(o.doc)
-                        if( doc.summary ) {
-                            operationProperties.append(`"summary": "${doc.summary}",`, NL)    
-                        }
-                        operationProperties.append(`"description": "${doc.description}",`, NL)
-                    }
-                    const parameters = o.parameters.filter( p => p.in !== 'body')
-                    if( parameters.length > 0 ) {
-                        operationProperties.append(`"parameters": [`, NL)
-                        operationProperties.indent( parameterBody => {
-                            parameters.forEach( p => generateParameter(p, parameterBody) )
-                        } )
-                        operationProperties.append(`],`, NL)
-                    }
-                    const body = o.parameters.find( p => p.in === 'body' );
-                    if( body ) {
-                        operationProperties.append(`"requestBody": {`, NL)
-                        operationProperties.indent( parameterProps => {
-                            parameterProps.append(`"content": {`, NL)
-                            parameterProps.indent( contentBody => {
-                                contentBody.append(`"application/json": {`, NL)
-                                contentBody.indent( contentDef => {
-                                generateSchema(body.type, contentDef)
-                            } )
-                            contentBody.append(`}`, NL)
-                            })
-                            parameterProps.append('}', NL)
-                        });
-                        operationProperties.append(`},`, NL)
-                    }
-                    operationProperties.append(`"responses": {`, NL)
-                    operationProperties.indent( responseBody => {
-                        o.respones.forEach( (r,idx) => {
-                            responseBody.append(`"${r.code}": {`, NL)
-                            responseBody.indent( responseProps => {
-                                responseProps.append(`"description": ""`)
-                                if( r.type ) {
-                                    responseProps.append(',', NL)
-                                    const type = r.type;
-                                    responseProps.append(`"content": {`, NL)
-                                    responseProps.indent( mime => {
-                                        mime.append(`"application/json": {`, NL)
-                                        mime.indent( schema => generateSchema(type, schema) )
-                                        mime.append(`}`, NL)
-                                    } )
-                                    responseProps.append(`}`, NL)
-                                } else {
-                                    responseProps.appendNewLine();
-                                }
-                            } )
-                            responseBody.append(`}`)
-                            if( idx + 1 < o.respones.length ) {
-                                responseBody.append(',')
-                            }
-                            responseBody.appendNewLine();
-                        } );
-                    } )
-                    operationProperties.append(`}`, NL)
-                } );
-                operationBody.append(`}`)
-                if( idx + 1 < p.operations.length ) {
-                    operationBody.append(',')
-                }
-                operationBody.appendNewLine();
-            } )
-            
-        } );
-        endpointBody.append(`}`)
-        if( idx + 1 < endpoint.paths.length ) {
-            endpointBody.append(',')
+function schemas(types: CustomType[]) {
+    const result: Record<string, unknown> = {}
+    types.forEach( t => {
+        if( isValueType(t) ) {
+            result[t.name] = valueType(t);
+        } else if( isUnionType(t) ) {
+            result[t.name] = unionType(t);
         }
-        endpointBody.appendNewLine();
-    } );
-}
-
-function generateParameter(parameter: Parameter, parameterBody: IndentNode) {
-    parameterBody.append('{', NL)
-    parameterBody.indent( parameterProps => {
-        parameterProps.append(`"name": "${parameter.name}",`, NL)
-        parameterProps.append(`"in": "${parameter.in}",`, NL)
-        if( parameter.in === 'path' || parameter.optional === false ) {
-            parameterProps.append(`"required": true,`, NL)
-        }
-        generateSchema(parameter.type, parameterProps)        
-    })
-    parameterBody.append('}', NL)
-}
-
-function generateSchema(type: Type, contentDef: IndentNode) {
-    contentDef.append(`"schema": {`, NL)
-    if( type.array ) {
-        contentDef.indent( arrayDef => {
-            arrayDef.append(`"type": "array",`, NL)
-            if( type.maxItems ) {
-                arrayDef.append(`"maxItems": ${type.maxItems},`, NL)
-            }
-            arrayDef.append(`"items": {`, NL)
-            arrayDef.indent( typeDefBody => generateTypeDef(type.typeDef, typeDefBody) )
-            arrayDef.append(`}`, NL)    
-        })
-    } else {
-        contentDef.indent( typeDefBody => generateTypeDef(type.typeDef,typeDefBody))
-    }
-    
-    contentDef.append(`}`, NL)
-}
-
-function generateValueType(type: ValueType, schemaBody: IndentNode, last: boolean) {
-    schemaBody.append(`"${type.name}": {`, NL)
-    schemaBody.indent(typeBody => {
-        generateValueTypeBody(type, typeBody);
+        
     } )
-    schemaBody.append(`}`)
-    if( ! last ) {
-        schemaBody.append(',')
-    }
-    schemaBody.appendNewLine();
+    return result;
 }
 
-function generateValueTypeBody(type: ValueType, typeBody: IndentNode) {
+function valueType(type: ValueType) {
     if( type.parents.length > 0 ) {
-        typeBody.append(`"allOf": [`, NL)
-        typeBody.indent( allOfBody => {
-            type.parents.forEach( p => {
-                if( p.ref ) {
-                    const ref = p.ref;
-                    allOfBody.append('{', NL)
-                    allOfBody.indent( objectTypeBody => {
-                        objectTypeBody.append(`"$ref": "#/components/schemas/${ref.name}"`)
-                    } )
-                    allOfBody.append('},', NL)    
-                }
-            });
-            allOfBody.append('{', NL)
-            allOfBody.indent( objectTypeBody => {
-                generateObjectType(type, objectTypeBody)
-            } );
-            allOfBody.append('}', NL)
+        const result : Record<string, unknown> = {}
+        const arr : unknown[] = []
+        result['allOf'] = arr;
+        type.parents.forEach( p => {
+            if( p.ref ) {
+                arr.push( { '$ref': `#/components/schemas/${p.ref.name}` })
+            }
+        } )
+        arr.push(objectType(type))
+        return result;
+    } else {
+        return objectType(type);
+    }
+}
+
+function objectType(type: ValueType) {
+    const result: Record<string, unknown> = {
+        type: 'object',
+        properties: properties(type)
+    }
+    return result;
+}
+
+function properties(type: ValueType) {
+    const result: Record<string, unknown> = {}
+    if( type.descriminator ) {
+        result[type.descriminator] = {
+            type: 'string'
+        }
+    }
+    type.properties.forEach( p => {
+        result[p.name] = property(p)
+    })
+    return result;
+}
+
+function property(p: Property) {
+    if( p.type.array ) {
+        const result: Record<string, unknown> = {}
+        if( p.doc ) {
+            const doc = parseAPIDoc(p.doc);
+            result['description'] = `${doc.summary ? doc.summary + ' ' + doc.description : doc.description}`
+        }    
+        result['type'] = 'array'
+        result['items'] = typeDef(p.type.typeDef)
+        return result;
+    } else {
+        const result = typeDef(p.type.typeDef)
+        if( p.doc ) {
+            const doc = parseAPIDoc(p.doc);
+            result['description'] = `${doc.summary ? doc.summary + ' ' + doc.description : doc.description}`
+        }
+        return result;
+    }
+}
+
+function unionType(t: UnionType) {
+    const oneOf : unknown[] = []
+    t.types.forEach( t => {
+        oneOf.push( { '$ref': `#/components/schemas/${t.ref?.name}` })
+    })
+
+    return {
+        oneOf
+    }
+}
+
+function endpoints(endpoints: Endpoint[]) {
+    const result : Record<string, unknown> = {};
+
+    endpoints.forEach( e => {
+        e.paths.forEach( p => {
+            result[`${e.path}${p.path}`] = path(p)
         })
-        typeBody.append(`]`, NL)
-    } else {
-        generateObjectType(type, typeBody)
-    }
-}
-
-function generateObjectType(type: ValueType, objectTypeBody: IndentNode) {
-    objectTypeBody.append(`"type": "object",`, NL)
-    objectTypeBody.append(`"properties": {`, NL)
-    objectTypeBody.indent( propertyBody => {
-        if( type.descriminator ) {
-            propertyBody.append( `"${type.descriminator}": {`, NL )
-            propertyBody.indent( typeDefBody => typeDefBody.append('"type": "string"', NL) )
-            propertyBody.append( `},`, NL )
-        }
-        type.properties.forEach( (p, idx) => {
-            generateProperty(p, propertyBody, type.properties.length === idx + 1)
-        });
     });
-    
-    objectTypeBody.append(`}`,NL)
+
+    return result;
 }
 
-function generateProperty(property: Property, propertyBody: IndentNode, last: boolean) {
-    propertyBody.append(`"${property.name}": {`, NL)
-    if( property.doc ) {
-        propertyBody.indent( typeDefBody => {
-            const doc = parseAPIDoc(property.doc);
-            typeDefBody.append(`"description": "${doc.summary ? doc.summary + ' ' + doc.description : doc.description}",`, NL)
-        } );
-    }
-    if( property.type.array ) {
-        propertyBody.indent( arrayBody => {
-            arrayBody.append(`"type": "array",`, NL)
-            arrayBody.append(`"items": {`, NL)
-            arrayBody.indent( typeDefBody => generateTypeDef(property.type.typeDef, typeDefBody) )
-            arrayBody.append(`}`, NL)
-        });
-    } else {
-        propertyBody.indent(typeDefBody => generateTypeDef(property.type.typeDef, typeDefBody))
-    }
-    propertyBody.append(`}`)
-    if( ! last ) {
-        propertyBody.append(',')
-    }
-    propertyBody.appendNewLine();
+function path(path: Path) {
+    const result : Record<string,unknown> = {}
+    path.operations.forEach( op => {
+        result[op.type] = operation(op);
+    } )
+
+    return result;
 }
 
-function generateTypeDef(typeDef: TypeDef, typeDefBody: IndentNode) {
-    if( isBuiltinStringFormats(typeDef.builtinType) ) {
-        typeDefBody.append(`"type": "string"`)
-        
-        if( typeDef.builtinType !== 'string' ) {
-            typeDefBody.append(',', NL,`"format": "${typeDef.builtinType}"`)
+function operation(op: Operation) {
+    const result : Record<string,unknown> = {}
+    result['operationId'] = op.name;
+    if( op.doc ) {
+        const doc = parseAPIDoc(op.doc)
+        if( doc.summary ) {
+            result['summary'] = doc.summary
         }
-        typeDefBody.appendNewLine()
-    } else if( isBuiltinIntegerFormats(typeDef.builtinType) ) {
-        typeDefBody.append(`"type": "integer"`, NL)
-    } else if( isBuiltinFloatFormats(typeDef.builtinType) ) {
-        typeDefBody.append(`"type": "number"`, NL)
-    } else if( isPrimitiveFloats(typeDef.primitive) ) {
-        typeDefBody.append(`"type": "number",`, NL)
-        typeDefBody.append(`"format": "${typeDef.primitive.format}"`)
-        if( typeDef.primitive.lower !== undefined ) {
-            typeDefBody.append(',', NL, `"minimum": ${typeDef.primitive.lower}`)
-            if( typeDef.primitive.lowerBound === '(' ) {
-                typeDefBody.append(',', NL, `"exclusiveMinimum": true`)
-            }
-        }
-        if( typeDef.primitive.upper !== undefined ) {
-            typeDefBody.append(',', NL, `"maximum": ${typeDef.primitive.upper}`)
-            if( typeDef.primitive.upperBound === ')' ) {
-                typeDefBody.append(',', NL, `"exclusiveMaximum": true`)
-            }
-        }
-        typeDefBody.appendNewLine();
-    } else if( isPrimitiveIntegers(typeDef.primitive) ) {
-        typeDefBody.append(`"type": "integer",`, NL)
-        typeDefBody.append(`"format": "${typeDef.primitive.format}"`)
-        if( typeDef.primitive.lower !== undefined ) {
-            typeDefBody.append(',', NL, `"minimum": ${typeDef.primitive.lower}`)
-            if( typeDef.primitive.lowerBound === '(' ) {
-                typeDefBody.append(',', NL, `"exclusiveMinimum": true`)
-            }
-        }
-        if( typeDef.primitive.upper !== undefined ) {
-            typeDefBody.append(',', NL, `"maximum": ${typeDef.primitive.upper}`)
-            if( typeDef.primitive.upperBound === ')' ) {
-                typeDefBody.append(',', NL, `"exclusiveMaximum": true`)
-            }
-        }
-        typeDefBody.appendNewLine();
-    } else if( typeDef.refType && isAlias(typeDef.refType.ref) ) {
-        generateTypeDef(typeDef.refType.ref.type.typeDef, typeDefBody);
-    } else if( typeDef.refType && isValueType(typeDef.refType.ref) ) {
-        typeDefBody.append(`"$ref": "#/components/schemas/${typeDef.refType.ref.name}"`, NL)
+        result['description'] = doc.description
     }
-}
-
-function generateUnionType(type: UnionType, schemaBody: IndentNode, last: boolean) {
-    schemaBody.append(`"${type.name}": {`, NL)
-    schemaBody.indent( unionBody => {
-        unionBody.append(`"oneOf": [`, NL)
-        unionBody.indent( typeRefBody => {
-            type.types.forEach( (t, idx) => {
-                typeRefBody.append('{', NL)
-                typeRefBody.indent( propBody => {
-                    propBody.append(`"$ref": "#/components/schemas/${t.ref?.name}"`, NL)
-                } )
-                typeRefBody.append('}')
-                if( idx + 1 !== type.types.length ) {
-                    typeRefBody.append(',');
+    const params = op.parameters.filter( p => p.in !== 'body')
+    if( params.length > 0 ) {
+        result['parameters'] = parameters(params)
+    }
+    const body = op.parameters.find( p => p.in === 'body' );
+    if( body ) {
+        result['requestBody'] = {
+            content: {
+                'application/json': {
+                    schema: schema(body.type)
                 }
-                typeRefBody.appendNewLine();
-            } )
-        } );
-        
-        unionBody.append(`]`, NL)
-    } )
-    schemaBody.append(`}`)
-    if( ! last ) {
-        schemaBody.append(',')
+            }
+        }
     }
-    schemaBody.appendNewLine();
+
+    result['responses'] = responses(op.respones);
+
+    return result;
 }
 
-function generateRecursiveModel(modelType: ModelType, modelBody: IndentNode, root: boolean) {
-    modelType.properties.forEach( (p, idx) => {
-        if( isStringLiteral(p.value) ) {
-            modelBody.append(`"${p.name}": "${jsonSaveString(p.value.value)}"${modelType.properties.length === idx + 1 ?'':','}`, NL)
-        } else if( isModelType(p.value) ) {
-            const subType = p.value;
-            modelBody.append(`"${p.name}": {`, NL)
-            modelBody.indent( subModelBody => {
-                generateRecursiveModel(subType, subModelBody, false);
-            });
-            modelBody.append(`}`)
-            if( modelType.properties.length !== idx + 1 || root ) {
-                modelBody.append(',')
-            }
-            modelBody.appendNewLine();
-        } else if( p.values.length > 0 ) {
-            modelBody.append(`"${p.name}": [`, NL)
-            modelBody.indent( arrayContent => {
-                p.values.forEach( (v, idx) => {
-                    if( isStringLiteral(v) ) {
-                        arrayContent.append(`"${v}"`)
-                    } else {
-                        arrayContent.append('{',NL)
-                        arrayContent.indent( subModelBody => generateRecursiveModel(v, subModelBody, false))
-                        arrayContent.append('}')
-                    }
+function parameters(params: Parameter[]) {
+    return params.map(parameter)
+}
 
-                    if( idx + 1 < p.values.length ) {
-                        arrayContent.append(',')
-                    }
-                    arrayContent.append(NL)
-                } );
-            });
-            modelBody.append(`]`)
-            if( modelType.properties.length !== idx + 1 || root ) {
-                modelBody.append(',')
+function parameter(param: Parameter) {
+    const result: Record<string, unknown> = {
+        name: param.name,
+        in: param.in
+    };
+    if( param.in === 'path' || param.optional === false ) {
+        result['required'] = true
+    }
+
+    result['schema'] = schema(param.type)
+
+    return result;
+}
+
+function responses(resps: Response[]) {
+    const result : Record<string, unknown> = {}
+
+    resps.forEach( r => {
+        result[`${r.code}`] = response(r)
+
+    } )
+
+    return result;
+}
+
+function response(resp: Response) {
+    const result : Record<string, unknown> = {
+        description: 'TBD'
+    }
+    if( resp.type ) {
+        result['content'] = {
+            'application/json': {
+                'schema': schema(resp.type)
             }
-            modelBody.appendNewLine();
+        }
+    }
+    return result;
+}
+
+function schema(type: Type) {
+    if( type.array ) {
+        const result : Record<string, unknown> = {};
+        result['type'] = 'array'
+        if( type.maxItems ) {
+            result['maxItems'] = type.maxItems
+        }
+        result['items'] = typeDef(type.typeDef)
+        return result;
+    } else {
+        return typeDef(type.typeDef)
+    }
+}
+
+function typeDef(tDef: TypeDef): Record<string, unknown> {
+    if( tDef.refType && isAlias(tDef.refType.ref) ) {
+        return typeDef(tDef.refType.ref.type.typeDef);
+    }
+    const result : Record<string, unknown> = {};
+
+    if( isBuiltinStringFormats(tDef.builtinType) ) {
+        result['type'] = 'string'
+        if( tDef.builtinType !== 'string' ) {
+            result['format'] = tDef.builtinType
+        }
+    } else if( isBuiltinIntegerFormats(tDef.builtinType) ) {
+        result['type'] = 'integer'
+    } else if( isBuiltinFloatFormats(tDef.builtinType) ) {
+        result['type'] = 'number'
+    } else if( isPrimitiveFloats(tDef.primitive) || isPrimitiveIntegers(tDef.primitive) ) {
+        if( isPrimitiveFloats(tDef.primitive) ) {
+            result['type'] = 'number'
+            result['format'] = tDef.primitive.format;    
+        } else {
+            result['type'] = 'integer'
+            result['format'] = tDef.primitive.format;    
+        }
+        if( tDef.primitive.lower !== undefined ) {
+            result['minimum'] = tDef.primitive.lower
+            if( tDef.primitive.lowerBound === '(' ) {
+                result['exclusiveMinimum'] = true;
+            }
+        }
+        if( tDef.primitive.upper !== undefined ) {
+            result['maximum'] = tDef.primitive.upper
+            if( tDef.primitive.upperBound === ')' ) {
+                result['exclusiveMaximum'] = true;
+            }
+        }
+    } else if( tDef.refType && isCustomType(tDef.refType.ref) ) {
+        result['$ref'] = `#/components/schemas/${tDef.refType.ref.name}`;
+    }
+
+    return result;
+}
+
+function recursiveModel(modelType: ModelType, parent: Record<string, unknown>) {
+    modelType.properties.forEach( p => {
+        if( isStringLiteral(p.value) ) {
+            parent[p.name] = p.value.value;
+        } else if( isModelType(p.value) ) {
+            const child = {};
+            parent[p.name] = child;
+            recursiveModel(p.value, child)
+        } else if( p.values.length > 0 ) {
+            const child : unknown[] = [];
+            parent[p.name] = child;
+            recursiveArray(p.values, child);
         }
     } )
 }
 
-function jsonSaveString(value: string) {
-    return value.split(/\r?\n/)
-        .map( l => l.trim().replaceAll('"', '\\"') )
-        .join('\\n');
+function recursiveArray(values: ModelValue[], parent: unknown[]) {
+    values.forEach( v => {
+        if( isStringLiteral(v) ) {
+            parent.push(v)
+        } else if( isModelType(v) ) {
+            const obj = {};
+            recursiveModel(v, obj);
+            parent.push(obj)
+        }
+    })
 }
 
 type APIDoc = {
