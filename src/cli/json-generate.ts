@@ -1,6 +1,30 @@
-import { Endpoint, isModelType, isStringLiteral, ValueType, type Model, type ModelType, UnionType, isValueType, isUnionType, Property, isBuiltinStringFormats, isBuiltinIntegerFormats, isAlias, TypeDef, isBuiltinFloatFormats, isPrimitiveFloats, isPrimitiveIntegers, Parameter, Type, ModelValue, Path, Operation, isCustomType, Response, CustomType } from '../language/generated/ast.js';
-
-import { toJSONString } from './json-util.js';
+import { 
+    Endpoint, 
+    isModelType, 
+    isStringLiteral, 
+    ValueType, 
+    type Model, 
+    type ModelType, 
+    UnionType, 
+    isValueType, 
+    isUnionType, 
+    Property, 
+    isBuiltinStringFormats, 
+    isBuiltinIntegerFormats, 
+    isAlias, 
+    TypeDef, 
+    isBuiltinFloatFormats, 
+    isPrimitiveFloats, 
+    isPrimitiveIntegers, 
+    Parameter, 
+    Type, 
+    ModelValue, 
+    Path, 
+    Operation, 
+    isCustomType, 
+    Response, 
+    CustomType 
+} from '../language/generated/ast.js';
 
 export function generateOpenAPIJSONContent(model: Model): string {
     const result : Record<string, unknown> = {};
@@ -19,7 +43,7 @@ export function generateOpenAPIJSONContent(model: Model): string {
         }
     }
 
-    return toJSONString(result);
+    return JSON.stringify(result, null, 2);
 }
 
 function schemas(types: CustomType[]) {
