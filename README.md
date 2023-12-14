@@ -19,4 +19,5 @@ code generated/test.osl
 
 ## In the browser
 
-TBD
+As Languim works perfectly fine inside a modern browser you can use the DSL in your favorite browser right away
+by going https://bestsolution-at.github.io/openapi-dsl . Give it a try and let us know what features you are missing.
