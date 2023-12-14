@@ -50,7 +50,7 @@ types {
 
     type BaseVehicle {
         _type: string -- descriminator used to differentiate vehicles
-        numberOfWheels: WHEELS -- number of wheels
+        numberOfWheels?: WHEELS -- number of wheels
         weight: WEIGHT -- the weight in KG
     }
 
@@ -59,8 +59,8 @@ types {
     }
 
     type Bicycle(_type) extends BaseVehicle {
-        frontGearWheels: int32 -- number of front gears
-        backGearWheels: int32 -- number of back gears
+        frontGearWheels: int32? -- number of front gears
+        backGearWheels?: int32? -- number of back gears
     }
 
     union Vehicle = Car | Bicycle

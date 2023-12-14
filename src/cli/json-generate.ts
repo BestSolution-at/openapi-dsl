@@ -81,6 +81,12 @@ function objectType(type: ValueType) {
         type: 'object',
         properties: properties(type)
     }
+    const required = type.properties
+        .filter( p => ! p.optional)
+        .map( p => p.name )
+    if( required.length > 0 ) {
+        result['required'] = required;
+    }
     return result;
 }
 
@@ -103,12 +109,15 @@ function property(p: Property) {
         if( p.doc ) {
             const doc = parseAPIDoc(p.doc);
             result['description'] = `${doc.summary ? doc.summary + ' ' + doc.description : doc.description}`
-        }    
+        }
         result['type'] = 'array'
         result['items'] = typeDef(p.type.typeDef)
         return result;
     } else {
         const result = typeDef(p.type.typeDef)
+        if( p.nullable ) {
+            result['nullable'] = true
+        }
         if( p.doc ) {
             const doc = parseAPIDoc(p.doc);
             result['description'] = `${doc.summary ? doc.summary + ' ' + doc.description : doc.description}`

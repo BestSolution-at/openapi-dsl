@@ -100,7 +100,7 @@ Parameter:
 
 Property:
     doc=(ML_DOC_COMMENT|SL_DOC_COMMENT)?
-    name=ID optional='?'? ':' type=Type doc=SL_DOC_COMMENT?
+    name=ID optional?='?'? ':' type=Type nullable?='?'? doc=SL_DOC_COMMENT?
 ;
 
 Type:
@@ -108,7 +108,7 @@ Type:
 ;
 
 TypeDef:
-    (refType=[CustomType:ID] | builtinType=Builtin | primitive=Primitive ) nullable?='?'?
+    (refType=[CustomType:ID] | builtinType=Builtin | primitive=Primitive )
 ;
 
 NumberLiteral:
